@@ -1,0 +1,128 @@
+// Jenkinsfile_parameterized  (Extra 2)
+// Same steps as the main Jenkinsfile, but:
+//   - NO pollSCM -> triggered manually only ("Build with Parameters")
+//   - TEST_MODE parameter selects which test runs:
+//       1 = frontend_testing.py only
+//       2 = backend_testing.py only
+//       3 = combined_testing.py only (default)
+
+pipeline {
+    agent any
+
+    parameters {
+        // Jenkins has no native int parameter, so a string is used and validated below
+        string(name: 'TEST_MODE', defaultValue: '3',
+               description: '1 = frontend only, 2 = backend only, 3 = combined only')
+    }
+
+    options {
+        buildDiscarder(logRotator(daysToKeepStr: '5', numToKeepStr: '20'))
+        skipDefaultCheckout()
+    }
+
+    environment {
+        NOTIFY_EMAIL = 'your.email@example.com'   // CHANGE ME
+        PY = "${WORKSPACE}/venv/bin/python"
+    }
+
+    stages {
+        stage('Validate parameter') {
+            steps {
+                script {
+                    if (!(params.TEST_MODE?.trim() in ['1', '2', '3'])) {
+                        error "Invalid TEST_MODE '${params.TEST_MODE}'. Must be 1, 2 or 3."
+                    }
+                    echo "Running with TEST_MODE = ${params.TEST_MODE}"
+                }
+            }
+        }
+
+        stage('Pull code') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Set up Python environment') {
+            steps {
+                sh '''
+                    python3 -m venv venv
+                    venv/bin/pip install --upgrade pip
+                    venv/bin/pip install -r requirements.txt
+                '''
+            }
+        }
+
+        stage('Run backend server (rest_app.py)') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'db_credentials',
+                                                  usernameVariable: 'DB_USER',
+                                                  passwordVariable: 'DB_PASS')]) {
+                    sh 'JENKINS_NODE_COOKIE=dontKillMe nohup $PY rest_app.py "$DB_USER" "$DB_PASS" > rest_app.log 2>&1 &'
+                }
+            }
+        }
+
+        stage('Run frontend server (web_app.py)') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'db_credentials',
+                                                  usernameVariable: 'DB_USER',
+                                                  passwordVariable: 'DB_PASS')]) {
+                    sh 'JENKINS_NODE_COOKIE=dontKillMe nohup $PY web_app.py "$DB_USER" "$DB_PASS" > web_app.log 2>&1 &'
+                }
+                sh 'sleep 5'
+            }
+        }
+
+        stage('Run frontend_testing.py') {
+            when { expression { params.TEST_MODE.trim() == '1' } }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'db_credentials',
+                                                  usernameVariable: 'DB_USER',
+                                                  passwordVariable: 'DB_PASS')]) {
+                    sh '$PY frontend_testing.py "$DB_USER" "$DB_PASS"'
+                }
+            }
+        }
+
+        stage('Run backend_testing.py') {
+            when { expression { params.TEST_MODE.trim() == '2' } }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'db_credentials',
+                                                  usernameVariable: 'DB_USER',
+                                                  passwordVariable: 'DB_PASS')]) {
+                    sh '$PY backend_testing.py "$DB_USER" "$DB_PASS"'
+                }
+            }
+        }
+
+        stage('Run combined_testing.py') {
+            when { expression { params.TEST_MODE.trim() == '3' } }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'db_credentials',
+                                                  usernameVariable: 'DB_USER',
+                                                  passwordVariable: 'DB_PASS')]) {
+                    sh '$PY combined_testing.py "$DB_USER" "$DB_PASS"'
+                }
+            }
+        }
+
+        stage('Run clean_environment.py') {
+            steps {
+                sh '$PY clean_environment.py'
+            }
+        }
+    }
+
+    post {
+        always {
+            sh '[ -x "$PY" ] && $PY clean_environment.py || true'
+            archiveArtifacts artifacts: '*.log', allowEmptyArchive: true
+        }
+        failure {
+            mail to: "${NOTIFY_EMAIL}",
+                 subject: "FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER} (TEST_MODE=${params.TEST_MODE})",
+                 body: "Build failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}\nSee console output: ${env.BUILD_URL}console"
+        }
+    }
+}

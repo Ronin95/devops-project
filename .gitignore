@@ -1,0 +1,15 @@
+# Virtual environments
+devops_env/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Logs from nohup / Jenkins runs
+*.log
+nohup.out
+
+# IDE
+.idea/
+.vscode/
