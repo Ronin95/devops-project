@@ -9,6 +9,7 @@ Usage:
 
 import os
 import signal
+import threading
 from flask import Flask
 import db_connector
 
@@ -36,8 +37,10 @@ def stop_server():
     """
     Stops the server by sending SIGINT (Ctrl+C) to its own process.
     Note: signal.CTRL_C_EVENT is Windows-only, so SIGINT is used on Linux.
+    The signal is delayed by 0.5s so this response is fully sent to the
+    client before the server shuts down.
     """
-    os.kill(os.getpid(), signal.SIGINT)
+    threading.Timer(0.5, os.kill, args=(os.getpid(), signal.SIGINT)).start()
     return 'Server stopped'
 
 
