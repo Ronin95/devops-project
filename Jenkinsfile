@@ -18,8 +18,8 @@ pipeline {
     }
 
     environment {
-        // Address that receives an email on failure (Extra 1) - CHANGE ME
-        NOTIFY_EMAIL = 'your.email@example.com'
+        // Address that receives an email on failure (Extra 1)
+        NOTIFY_EMAIL = 'n.badjevic@gmail.com'
         // Path to the Python interpreter of the venv created by this pipeline
         PY = "${WORKSPACE}/venv/bin/python"
     }

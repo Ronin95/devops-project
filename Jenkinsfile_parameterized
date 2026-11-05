@@ -21,7 +21,7 @@ pipeline {
     }
 
     environment {
-        NOTIFY_EMAIL = 'your.email@example.com'   // CHANGE ME
+        NOTIFY_EMAIL = 'n.badjevic@gmail.com'   // Receives failure alerts (Extra 1)
         PY = "${WORKSPACE}/venv/bin/python"
     }
 
