@@ -52,5 +52,9 @@ def page_not_found(error):
 if __name__ == '__main__':
     # Read DB username/password from command line (Extra 3)
     db_connector.init_from_argv()
+    # When started in the background from a script (e.g. Jenkins: `nohup ... &`),
+    # the shell makes the process IGNORE SIGINT, so /stop_server would do nothing.
+    # Re-enable the normal Ctrl+C (KeyboardInterrupt) behaviour explicitly.
+    signal.signal(signal.SIGINT, signal.default_int_handler)
     # Port 5001 so it doesn't conflict with the REST API; debug off for /stop_server
     app.run(host='127.0.0.1', debug=False, port=5001)
