@@ -116,14 +116,14 @@ pipeline {
                     for i in $(seq 1 45); do
                         if curl -s -o /dev/null http://127.0.0.1:5000/users/0; then
                             echo "Dockerized REST API is up"
-                            docker compose ps
+                            docker ps --filter "name=devops-"
                             exit 0
                         fi
                         echo "Waiting for REST API container... ($i/45)"
                         sleep 2
                     done
                     echo "REST API container did not come up in time"
-                    docker compose ps
+                    docker ps -a --filter "name=devops-"
                     exit 1
                 '''
             }
@@ -142,9 +142,8 @@ pipeline {
 
     post {
         always {
-            // Stop the local rest_app.py if a test failed before clean_environment ran
-            sh '[ -x "$PY" ] && $PY clean_environment.py || true'
-            // Clean environment: compose down (incl. MySQL volume) + delete local image
+            // Clean environment: compose down (incl. MySQL volume) + delete local image.
+            // Runs FIRST, so port 5000 belongs to the container only until it is removed.
             withCredentials([usernamePassword(credentialsId: 'db_credentials',
                                               usernameVariable: 'DB_USER',
                                               passwordVariable: 'DB_PASS')]) {
@@ -153,6 +152,9 @@ pipeline {
                     docker compose down -v --remove-orphans || true
                 '''
             }
+            // Then stop the LOCAL rest_app.py, in case a test failed before
+            // the clean_environment stage ran (otherwise prints "not responding").
+            sh '[ -x "$PY" ] && $PY clean_environment.py || true'
             sh 'docker rmi "$DOCKER_IMAGE:$BUILD_NUMBER" || true'
             sh 'docker logout || true'
             archiveArtifacts artifacts: '*.log', allowEmptyArchive: true
