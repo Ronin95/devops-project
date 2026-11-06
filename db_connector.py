@@ -4,6 +4,7 @@ This module provides functions to interact with the MySQL database.
 It handles user creation, retrieval, updating, and deletion.
 """
 
+import os
 import sys
 import pymysql
 from pypika import Query, Table, Parameter
@@ -12,7 +13,10 @@ from datetime import datetime
 # Database Configuration
 # Username and password are NOT stored in code - they are passed as
 # command line arguments (sys.argv) and set via set_credentials().
-DB_HOST = "localhost"
+# Host and port can be overridden with environment variables
+# (e.g. inside Docker: DB_HOST=mysql). Defaults = local MySQL.
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = int(os.getenv("DB_PORT", "3306"))
 DB_NAME = "devops_db"
 DB_USER = None
 DB_PASSWORD = None
@@ -44,6 +48,7 @@ def get_connection():
         raise RuntimeError("DB credentials not set. Call set_credentials() or init_from_argv() first.")
     return pymysql.connect(
         host=DB_HOST,
+        port=DB_PORT,
         user=DB_USER,
         password=DB_PASSWORD,
         database=DB_NAME,

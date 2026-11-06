@@ -1,5 +1,6 @@
 flask
 pymysql
+cryptography
 requests
 selenium
 pypika

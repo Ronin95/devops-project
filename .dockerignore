@@ -1,0 +1,11 @@
+devops_env/
+venv/
+.git/
+.docker/
+__pycache__/
+*.pyc
+*.log
+.env
+Jenkinsfile*
+mysql-init/
+*_testing.py

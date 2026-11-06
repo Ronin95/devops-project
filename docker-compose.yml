@@ -1,0 +1,44 @@
+# docker-compose.yml
+# Runs the dockerized REST API together with its own MySQL container (Extra).
+#
+# Variables:
+#   IMAGE_TAG    - from the .env file (pipeline: echo IMAGE_TAG=${BUILD_NUMBER} > .env)
+#   DOCKER_IMAGE - image name, e.g. <dockerhub_user>/devops-rest-app (shell env)
+#   DB_USER / DB_PASS - DB credentials (shell env; in Jenkins from 'db_credentials')
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: devops-mysql
+    environment:
+      MYSQL_DATABASE: devops_db
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    ports:
+      # Host port 3307, because the local MySQL already uses 3306
+      - "3307:3306"
+    volumes:
+      # Creates the users + config tables on first start
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # TCP ping only succeeds once the real server (not the init server) is up
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  rest_app:
+    image: ${DOCKER_IMAGE:-devops-rest-app}:${IMAGE_TAG:-latest}
+    container_name: devops-rest-app
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+    # Appended to the image ENTRYPOINT: python rest_app.py <db_user> <db_password>
+    command: ["${DB_USER}", "${DB_PASS}"]
+    ports:
+      - "5000:5000"

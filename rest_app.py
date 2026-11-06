@@ -100,4 +100,6 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal.default_int_handler)
     # debug=False: the debug reloader spawns a 2nd process, which would
     # prevent /stop_server from shutting the server down cleanly.
-    app.run(host='127.0.0.1', debug=False, port=5000)
+    # FLASK_HOST: 127.0.0.1 locally; the Docker image sets 0.0.0.0 so the
+    # API can be reached from outside the container.
+    app.run(host=os.getenv('FLASK_HOST', '127.0.0.1'), debug=False, port=5000)
