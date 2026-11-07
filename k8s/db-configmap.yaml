@@ -1,0 +1,10 @@
+# db-configmap.yaml (Extra 2)
+# DB host name/port for the REST API pods - read by db_connector.py
+# from the environment variables DB_HOST / DB_PORT.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-config
+data:
+  DB_HOST: mysql      # = name of the MySQL Service below
+  DB_PORT: "3306"

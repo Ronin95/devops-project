@@ -1,0 +1,14 @@
+# mysql-pvc.yaml (Extra 3)
+# PersistentVolumeClaim: requests the storage of mysql-pv for the MySQL pod.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+spec:
+  storageClassName: manual
+  volumeName: mysql-pv
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

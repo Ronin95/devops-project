@@ -11,10 +11,12 @@ from pypika import Query, Table, Parameter
 from datetime import datetime
 
 # Database Configuration
-# Username and password are NOT stored in code - they are passed as
-# command line arguments (sys.argv) and set via set_credentials().
-# Host and port can be overridden with environment variables
-# (e.g. inside Docker: DB_HOST=mysql). Defaults = local MySQL.
+# Username and password are NOT stored in code. They come from:
+#   - command line arguments (sys.argv) - Jenkins / local / docker compose, or
+#   - environment variables DB_USER / DB_PASSWORD - Kubernetes Secret 'db-secret'
+# Host and port come from environment variables DB_HOST / DB_PORT
+# (docker compose: DB_HOST=mysql, Kubernetes: ConfigMap 'db-config').
+# Defaults = local MySQL.
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = int(os.getenv("DB_PORT", "3306"))
 DB_NAME = "devops_db"
@@ -31,14 +33,20 @@ def set_credentials(user, password):
 
 def init_from_argv():
     """
-    Reads the DB username and password from the command line
-    (sys.argv[1] and sys.argv[2]) and sets them.
-    Exits with a usage message if they are missing.
+    Sets the DB username and password.
+    1. From the command line (sys.argv[1] and sys.argv[2]) if given.
+    2. Otherwise from the environment variables DB_USER / DB_PASSWORD
+       (in Kubernetes these are injected from the Secret 'db-secret').
+    Exits with a usage message if neither is available.
     """
-    if len(sys.argv) < 3:
-        print(f"Usage: python {sys.argv[0]} <db_user> <db_password>")
+    if len(sys.argv) >= 3:
+        set_credentials(sys.argv[1], sys.argv[2])
+    elif os.getenv("DB_USER") and os.getenv("DB_PASSWORD"):
+        set_credentials(os.getenv("DB_USER"), os.getenv("DB_PASSWORD"))
+    else:
+        print(f"Usage: python {sys.argv[0]} <db_user> <db_password>\n"
+              f"   or: set the environment variables DB_USER and DB_PASSWORD")
         sys.exit(1)
-    set_credentials(sys.argv[1], sys.argv[2])
 
 def get_connection():
     """
@@ -77,7 +85,6 @@ def setup_database():
                 CREATE TABLE IF NOT EXISTS config (
                     id INT PRIMARY KEY AUTO_INCREMENT,
                     api_url VARCHAR(255) NOT NULL,
-                    browser VARCHAR(50) NOT NULL,
                     test_user_name VARCHAR(50) NOT NULL
                 )
             ''')
@@ -87,8 +94,8 @@ def setup_database():
             result = cursor.fetchone()
             if result['count'] == 0:
                 cursor.execute('''
-                    INSERT INTO config (api_url, browser, test_user_name) 
-                    VALUES ('http://127.0.0.1:5000/users', 'Chrome', 'test_user')
+                    INSERT INTO config (api_url, test_user_name) 
+                    VALUES ('http://127.0.0.1:5000/users', 'test_user')
                 ''')
     finally:
         connection.close()

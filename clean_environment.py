@@ -1,15 +1,14 @@
 """
 clean_environment.py
-Stops both Flask servers (REST API on 5000 and Web App on 5001)
-by calling their /stop_server routes.
-Errors are caught so the script never crashes if a server is not responding.
+Stops the local REST API server (rest_app.py on port 5000)
+by calling its /stop_server route.
+Errors are caught so the script never crashes if the server is not responding.
 """
 import time
 import requests
 
 SERVERS = {
     "REST API": "http://127.0.0.1:5000/stop_server",
-    "Web App": "http://127.0.0.1:5001/stop_server",
 }
 
 

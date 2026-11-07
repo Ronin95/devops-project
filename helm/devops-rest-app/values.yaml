@@ -1,0 +1,14 @@
+# values.yaml - default values for the chart
+
+# Number of REST API pods
+replicaCount: 5
+
+image:
+  # <docker hub repo>:<version> - the pipeline overrides it with:
+  #   --set image.repository=nbadjev/devops-rest-app:${BUILD_NUMBER}
+  repository: nbadjev/devops-rest-app:latest
+
+service:
+  # LoadBalancer on minikube also gets a NodePort -> reachable via
+  # "minikube service hello-python-service --url"
+  type: LoadBalancer

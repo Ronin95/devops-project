@@ -6,6 +6,9 @@ __pycache__/
 *.pyc
 *.log
 .env
-Jenkinsfile*
+k8s_url.txt
+Jenkinsfile
 mysql-init/
+helm/
+k8s/
 *_testing.py

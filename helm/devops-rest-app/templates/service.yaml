@@ -1,0 +1,13 @@
+# service.yaml - exposes the REST API pods over TCP
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-python-service
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: hello-python
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000   # Flask app port

@@ -98,6 +98,10 @@ if __name__ == '__main__':
     # the shell makes the process IGNORE SIGINT, so /stop_server would do nothing.
     # Re-enable the normal Ctrl+C (KeyboardInterrupt) behaviour explicitly.
     signal.signal(signal.SIGINT, signal.default_int_handler)
+    # In a container the app runs as PID 1, which ignores SIGTERM by default.
+    # docker compose down / Kubernetes send SIGTERM -> treat it like Ctrl+C so
+    # the container stops immediately instead of being killed after a timeout.
+    signal.signal(signal.SIGTERM, signal.default_int_handler)
     # debug=False: the debug reloader spawns a 2nd process, which would
     # prevent /stop_server from shutting the server down cleanly.
     # FLASK_HOST: 127.0.0.1 locally; the Docker image sets 0.0.0.0 so the

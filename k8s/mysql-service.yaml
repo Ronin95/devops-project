@@ -1,0 +1,15 @@
+# mysql-service.yaml (Extra 3)
+# Headless service for the MySQL StatefulSet. Pods reach the DB as host "mysql"
+# (see ConfigMap db-config). Not exposed outside the cluster.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+spec:
+  clusterIP: None
+  selector:
+    app: mysql
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306

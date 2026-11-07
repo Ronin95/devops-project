@@ -1,0 +1,58 @@
+# mysql-statefulset.yaml (Extra 3)
+# Stateful MySQL for the REST API. Data lives on the PVC mysql-pvc, so it
+# survives pod restarts and "helm delete" of the app.
+# Needs (created by the pipeline, NOT stored in git):
+#   - Secret    db-secret     (DB_USER, DB_PASSWORD)  - from Jenkins credentials
+#   - ConfigMap mysql-initdb  (init.sql)              - from mysql-init/init.sql
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+spec:
+  serviceName: mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.4
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_DATABASE
+              value: devops_db
+            - name: MYSQL_RANDOM_ROOT_PASSWORD
+              value: "yes"
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_PASSWORD
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+            - name: mysql-initdb
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "mysqladmin ping -h 127.0.0.1 -u\"$MYSQL_USER\" -p\"$MYSQL_PASSWORD\" --silent"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: mysql-data
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+        - name: mysql-initdb
+          configMap:
+            name: mysql-initdb
